@@ -12,6 +12,8 @@ public class Receipt {
     private String mShopName;
     private String mComment;
     private Date mDate;
+    private double mLon;
+    private double mLat;
 
     public Receipt() {
         this(UUID.randomUUID());
@@ -20,6 +22,7 @@ public class Receipt {
     public Receipt(UUID id){
         mId = id;
         mDate = new Date();
+
     }
 
     public UUID getId() {
@@ -56,6 +59,22 @@ public class Receipt {
 
     public void setDate(Date date) {
         mDate = date;
+    }
+
+    public double getLon() {
+        return mLon;
+    }
+
+    public void setLon(double lon) {
+        mLon = lon;
+    }
+
+    public double getLat() {
+        return mLat;
+    }
+
+    public void setLat(double lat) {
+        mLat = lat;
     }
 
     public String getPhotoFilename(){

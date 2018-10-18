@@ -2,7 +2,6 @@ package com.bignerdranch.android.myreceipts;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -13,7 +12,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.List;
 
@@ -57,9 +55,12 @@ public class ReceiptListFragment extends Fragment {
             case R.id.new_receipt:
                 Receipt receipt = new Receipt();
                 ReceiptLab.get(getActivity()).addReceipt(receipt);
-                Intent intent = ReceiptActivity.newIntent(getActivity(), receipt.getId());
+                Intent intent = ReceiptActivity.newIntent(getActivity(), receipt.getId(), false);
                 startActivity(intent);
                 return true;
+            case R.id.receipt_help:
+                Intent intent1 = new Intent(getActivity(), HelpWebPage.class);
+                startActivity(intent1);
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -105,7 +106,7 @@ public class ReceiptListFragment extends Fragment {
 
         @Override
         public void onClick(View view){
-            Intent intent = ReceiptActivity.newIntent(getActivity(), mReceipt.getId());
+            Intent intent = ReceiptActivity.newIntent(getActivity(), mReceipt.getId(), true);
             startActivity(intent);
         }
     }

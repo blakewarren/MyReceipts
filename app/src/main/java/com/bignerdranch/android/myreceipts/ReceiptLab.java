@@ -40,6 +40,13 @@ public class ReceiptLab {
         mDatabase.insert(ReceiptTable.NAME, null, values);
     }
 
+    public void deleteReceipt(Receipt r) {
+        String uuidString = r.getId().toString();
+
+        mDatabase.delete(ReceiptTable.NAME, ReceiptTable.Cols.UUID + " = ?",
+                new String[] {uuidString});
+    }
+
     public List<Receipt> getReceipts(){
 
         List<Receipt> receipts = new ArrayList<>();
