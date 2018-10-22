@@ -1,5 +1,6 @@
 package com.bignerdranch.android.myreceipts;
 
+import android.location.Location;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
@@ -14,6 +15,7 @@ public class Receipt {
     private Date mDate;
     private double mLon;
     private double mLat;
+    private Location mLocation;
 
     public Receipt() {
         this(UUID.randomUUID());
@@ -77,7 +79,14 @@ public class Receipt {
         mLat = lat;
     }
 
-    public String getPhotoFilename(){
+    public Location getLocation() {
+        return mLocation;
+    }
+
+    public void setLocation(Location location) {
+        mLocation = location;
+
+    }public String getPhotoFilename(){
         return "IMG_" + getId().toString() + ".jpg";
     }
 }

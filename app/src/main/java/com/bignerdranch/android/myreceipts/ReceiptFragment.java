@@ -28,17 +28,20 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+
+import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 
 import java.io.File;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-public class ReceiptFragment extends Fragment {
+public class ReceiptFragment extends Fragment implements OnConnectionFailedListener{
 
     private static final String ARG_RECEIPT_ID = "receipt_id";
     private static final String DIALOG_DATE = "DialogDate";
@@ -46,6 +49,7 @@ public class ReceiptFragment extends Fragment {
 
     private static final int REQUEST_DATE = 0;
     private static final int REQUEST_PHOTO = 1;
+
 
     private Receipt mReceipt;
     private File mPhotoFile;
@@ -61,6 +65,8 @@ public class ReceiptFragment extends Fragment {
     private Button mDeleteButton;
     private boolean mDeleteEnabled;
     private GoogleApiClient mClient;
+    private Location mReceiptLocation;
+    private Location mCurrentLocation;
 
     public static ReceiptFragment newInstance(UUID receiptId, boolean newReceipt){
         Bundle args = new Bundle();
@@ -85,41 +91,48 @@ public class ReceiptFragment extends Fragment {
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                     @Override
                     public void onConnected(@Nullable Bundle bundle) {
-                        LocationRequest request = LocationRequest.create();
-                        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-                        request.setNumUpdates(1);
-                        request.setInterval(0);
+                        findLocation();
 
-                        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
-                                != PackageManager.PERMISSION_GRANTED){
-                            return;
-                        }
-
-                        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
-                            @Override
-                            public void onLocationChanged(Location location) {
-                                Log.i("LOCATION", "Got a fix: " + location);
-                            }
-                        });
                     }
 
                     @Override
                     public void onConnectionSuspended(int i) {
 
                     }
+
+
+
                 })
                 .build();
+
+
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult result){
+        Log.i("mClient", "the error is: " + result);
     }
 
     @Override
     public void onStart(){
         super.onStart();
+
         mClient.connect();
+
+        if (mClient.isConnected()){
+            Log.i("mClient", "Hallelujah this is Working!!!!!!!");
+        } else{
+            Log.i("mClient", "Why the hell is this not working!!!!!!!!!!");
+            if (mClient == null){
+                Log.i("mClient", "And why is this null");
+            }
+        }
     }
 
     @Override
     public void onStop(){
         super.onStop();
+
         mClient.disconnect();
     }
 
@@ -206,8 +219,33 @@ public class ReceiptFragment extends Fragment {
         });
 
         mLocation = v.findViewById(R.id.receipt_location);
+        /*if (!mClient.isConnected()){
+            mClient.connect();
+            findLocation();
+        } else {
+            findLocation();
+        }
+
+        if (mReceipt.getLocation() == null){
+            mReceipt.setLocation(mCurrentLocation);
+            mReceiptLocation = mCurrentLocation;
+        } else {
+            mReceiptLocation = mReceipt.getLocation();
+        }
+
+        mLocation.setText("Location: " + mReceiptLocation);*/
+
+
 
         mLocationButton = v.findViewById(R.id.receipt_show_location);
+        //mLocationButton.setEnabled(mClient.isConnected());
+        mLocationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i  = new Intent(getActivity(), MapsActivity.class);
+                startActivity(i);
+            }
+        });
 
 
         mReportButton = v.findViewById(R.id.receipt_report);
@@ -310,4 +348,27 @@ public class ReceiptFragment extends Fragment {
             mPhotoView.setImageBitmap(bitmap);
         }
     }
+
+    private void findLocation(){
+        LocationRequest request = LocationRequest.create();
+        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        request.setNumUpdates(1);
+        request.setInterval(0);
+
+        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED){
+            return;
+        }
+
+        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                mCurrentLocation = location;
+                Log.i("LOCATION", "Got a fix: " + location);
+            }
+        });
+
+
+    }
+
 }
