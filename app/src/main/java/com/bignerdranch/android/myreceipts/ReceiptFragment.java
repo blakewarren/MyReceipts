@@ -65,8 +65,6 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
     private Button mDeleteButton;
     private boolean mDeleteEnabled;
     private GoogleApiClient mClient;
-    private Location mReceiptLocation;
-    private Location mCurrentLocation;
 
     public static ReceiptFragment newInstance(UUID receiptId, boolean newReceipt){
         Bundle args = new Bundle();
@@ -88,10 +86,26 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
 
         mClient = new GoogleApiClient.Builder(getActivity())
                 .addApi(LocationServices.API)
+                .addOnConnectionFailedListener(this)
                 .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                     @Override
-                    public void onConnected(@Nullable Bundle bundle) {
-                        findLocation();
+                    public void onConnected(@Nullable Bundle savedInstanceState) {
+                        LocationRequest request = LocationRequest.create();
+                        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+                        request.setNumUpdates(1);
+                        request.setInterval(0);
+
+                        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
+                                != PackageManager.PERMISSION_GRANTED){
+                            return;
+                        }
+
+                        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
+                            @Override
+                            public void onLocationChanged(Location location) {
+                                Log.i("LOCATION", "Got a fix: " + location);
+                            }
+                        });
 
                     }
 
@@ -127,6 +141,8 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
                 Log.i("mClient", "And why is this null");
             }
         }
+
+        Log.i("mClient", "API is" + mClient);
     }
 
     @Override
@@ -219,6 +235,11 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
         });
 
         mLocation = v.findViewById(R.id.receipt_location);
+        /*if (mReceipt.getLocation() == null){
+            findLocation();
+        }*/
+
+        mLocation.setText("Location - Longitude:" + mReceipt.getLon() + "Latitude: " + mReceipt.getLat());
         /*if (!mClient.isConnected()){
             mClient.connect();
             findLocation();
@@ -242,8 +263,12 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
         mLocationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i  = new Intent(getActivity(), MapsActivity.class);
-                startActivity(i);
+                /*Intent i  = new Intent(getActivity(), MapsActivity.class);
+                startActivity(i);*/
+                findLocation();
+                double lon = mReceipt.getLon();
+                double lat = mReceipt.getLat();
+                mLocation.setText("Location - Longitude: " + lon + "Latitude: " + lat);
             }
         });
 
@@ -363,8 +388,11 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
         LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                mCurrentLocation = location;
-                Log.i("LOCATION", "Got a fix: " + location);
+                mReceipt.setLocation(location);
+                mReceipt.setLat(location.getLatitude());
+                mReceipt.setLon(location.getLongitude());
+                Log.i("LOCATION", "Got a fix: " + location.getLatitude());
+                Log.i("mReceipt", "Location is" + mReceipt.getLon());
             }
         });
 
