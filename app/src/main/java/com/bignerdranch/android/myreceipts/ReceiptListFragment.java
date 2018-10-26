@@ -1,10 +1,16 @@
 package com.bignerdranch.android.myreceipts;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -13,17 +19,44 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+
 import java.util.List;
 
 public class ReceiptListFragment extends Fragment {
     private RecyclerView mReceiptRecyclerView;
     private ReceiptAdapter mAdapter;
+    private GoogleApiClient mClient;
+    private Location mCurrentLocation;
 
     @Override
     public void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+        mClient = new GoogleApiClient.Builder(getActivity())
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
+                    @Override
+                    public void onConnected(@Nullable Bundle bundle) {
+                        findLocation();
+
+                    }
+
+                    @Override
+                    public void onConnectionSuspended(int i) {
+
+                    }
+
+
+
+                })
+                .build();
     }
+
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState){
@@ -35,6 +68,18 @@ public class ReceiptListFragment extends Fragment {
         updateUI();
 
         return view;
+    }
+
+    @Override
+    public void onStart(){
+        super.onStart();
+        mClient.connect();
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+        mClient.disconnect();
     }
 
     @Override
@@ -53,17 +98,46 @@ public class ReceiptListFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item){
         switch (item.getItemId()){
             case R.id.new_receipt:
-                Receipt receipt = new Receipt();
-                ReceiptLab.get(getActivity()).addReceipt(receipt);
-                Intent intent = ReceiptActivity.newIntent(getActivity(), receipt.getId(), false);
-                startActivity(intent);
-                return true;
+                if (mCurrentLocation == null){
+                    Receipt receipt = new Receipt();
+                    ReceiptLab.get(getActivity()).addReceipt(receipt);
+                    Intent intent = ReceiptActivity.newIntent(getActivity(), receipt.getId(), false, 16.00, 9.00);
+                    startActivity(intent);
+                    return true;
+                } else {
+                    Receipt receipt = new Receipt();
+                    ReceiptLab.get(getActivity()).addReceipt(receipt);
+                    Intent intent = ReceiptActivity.newIntent(getActivity(), receipt.getId(), false, mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+                    startActivity(intent);
+                    return true;
+                }
+
             case R.id.receipt_help:
                 Intent intent1 = new Intent(getActivity(), HelpWebPage.class);
                 startActivity(intent1);
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void findLocation() {
+        LocationRequest request = LocationRequest.create();
+        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        request.setNumUpdates(1);
+        request.setInterval(0);
+
+        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED){
+            return;
+        }
+
+        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                mCurrentLocation = location;
+                Log.i("LOCATION", "Got a fix: " + location);
+            }
+        });
     }
 
     private void updateUI(){
@@ -106,7 +180,7 @@ public class ReceiptListFragment extends Fragment {
 
         @Override
         public void onClick(View view){
-            Intent intent = ReceiptActivity.newIntent(getActivity(), mReceipt.getId(), true);
+            Intent intent = ReceiptActivity.newIntent(getActivity(), mReceipt.getId(), true, mReceipt.getLat(), mReceipt.getLon());
             startActivity(intent);
         }
     }

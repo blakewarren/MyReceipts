@@ -119,6 +119,8 @@ public class ReceiptLab {
         values.put(ReceiptTable.Cols.SHOPNAME, receipt.getShopName());
         values.put(ReceiptTable.Cols.COMMENTS, receipt.getComment());
         values.put(ReceiptTable.Cols.DATE, receipt.getDate().getTime());
+        values.put(ReceiptTable.Cols.LAT, receipt.getLat());
+        values.put(ReceiptTable.Cols.LON, receipt.getLon());
 
         return values;
     }

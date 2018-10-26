@@ -29,23 +29,18 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
-
 import java.io.File;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-public class ReceiptFragment extends Fragment implements OnConnectionFailedListener{
+public class ReceiptFragment extends Fragment{
 
     private static final String ARG_RECEIPT_ID = "receipt_id";
     private static final String DIALOG_DATE = "DialogDate";
     private static final String ARG_NEW_RECEIPT = "new_receipt";
+    private static final String ARG_RECEIPT_LONGITUDE = "receipt_longitude";
+    private static final String ARG_RECEIPT_LATITUDE = "receipt_latitude";
 
     private static final int REQUEST_DATE = 0;
     private static final int REQUEST_PHOTO = 1;
@@ -64,12 +59,15 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
     private ImageView mPhotoView;
     private Button mDeleteButton;
     private boolean mDeleteEnabled;
-    private GoogleApiClient mClient;
+    private double mCurrentLatitude;
+    private double mCurrentLongitude;
 
-    public static ReceiptFragment newInstance(UUID receiptId, boolean newReceipt){
+    public static ReceiptFragment newInstance(UUID receiptId, boolean newReceipt, double receiptLatitude, double receiptLongitude){
         Bundle args = new Bundle();
         args.putSerializable(ARG_RECEIPT_ID, receiptId);
         args.putBoolean(ARG_NEW_RECEIPT, newReceipt);
+        args.putDouble(ARG_RECEIPT_LATITUDE, receiptLatitude);
+        args.putDouble(ARG_RECEIPT_LONGITUDE, receiptLongitude);
 
         ReceiptFragment fragment = new ReceiptFragment();
         fragment.setArguments(args);
@@ -81,76 +79,14 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
         super.onCreate(savedInstanceState);
         final UUID receiptId = (UUID) getArguments().getSerializable(ARG_RECEIPT_ID);
         mDeleteEnabled = getArguments().getBoolean(ARG_NEW_RECEIPT);
+        mCurrentLatitude = getArguments().getDouble(ARG_RECEIPT_LATITUDE);
+        mCurrentLongitude = getArguments().getDouble(ARG_RECEIPT_LONGITUDE);
         mReceipt = ReceiptLab.get(getActivity()).getReceipt(receiptId);
         mPhotoFile = ReceiptLab.get(getActivity()).getPhotoFile(mReceipt);
 
-        mClient = new GoogleApiClient.Builder(getActivity())
-                .addApi(LocationServices.API)
-                .addOnConnectionFailedListener(this)
-                .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-                    @Override
-                    public void onConnected(@Nullable Bundle savedInstanceState) {
-                        LocationRequest request = LocationRequest.create();
-                        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-                        request.setNumUpdates(1);
-                        request.setInterval(0);
-
-                        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
-                                != PackageManager.PERMISSION_GRANTED){
-                            return;
-                        }
-
-                        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
-                            @Override
-                            public void onLocationChanged(Location location) {
-                                Log.i("LOCATION", "Got a fix: " + location);
-                            }
-                        });
-
-                    }
-
-                    @Override
-                    public void onConnectionSuspended(int i) {
-
-                    }
-
-
-
-                })
-                .build();
-
 
     }
 
-    @Override
-    public void onConnectionFailed(ConnectionResult result){
-        Log.i("mClient", "the error is: " + result);
-    }
-
-    @Override
-    public void onStart(){
-        super.onStart();
-
-        mClient.connect();
-
-        if (mClient.isConnected()){
-            Log.i("mClient", "Hallelujah this is Working!!!!!!!");
-        } else{
-            Log.i("mClient", "Why the hell is this not working!!!!!!!!!!");
-            if (mClient == null){
-                Log.i("mClient", "And why is this null");
-            }
-        }
-
-        Log.i("mClient", "API is" + mClient);
-    }
-
-    @Override
-    public void onStop(){
-        super.onStop();
-
-        mClient.disconnect();
-    }
 
     @Override
     public void onPause(){
@@ -235,40 +171,33 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
         });
 
         mLocation = v.findViewById(R.id.receipt_location);
-        /*if (mReceipt.getLocation() == null){
-            findLocation();
-        }*/
-
-        mLocation.setText("Location - Longitude:" + mReceipt.getLon() + "Latitude: " + mReceipt.getLat());
-        /*if (!mClient.isConnected()){
-            mClient.connect();
-            findLocation();
+        if (mDeleteEnabled){
+            double lat = mReceipt.getLat();
+            double lon = mReceipt.getLon();
+            mLocation.setText("Location: Longitude " + lon + ", Latitude " + lat);
+            String slat = Double.toString(mReceipt.getLat());
+            String slon = Double.toString(mReceipt.getLon());
+            Log.i("mLocation", slat + " " + slon);
         } else {
-            findLocation();
+            mReceipt.setLat(mCurrentLatitude);
+            mReceipt.setLon(mCurrentLongitude);
+            mLocation.setText("Location: Longitude " + mCurrentLongitude + ", Latitude " + mCurrentLatitude);
+            String lat = Double.toString(mReceipt.getLat());
+            String lon = Double.toString(mReceipt.getLon());
+            Log.i("mLocation", lat + " " + lon);
         }
 
-        if (mReceipt.getLocation() == null){
-            mReceipt.setLocation(mCurrentLocation);
-            mReceiptLocation = mCurrentLocation;
-        } else {
-            mReceiptLocation = mReceipt.getLocation();
-        }
-
-        mLocation.setText("Location: " + mReceiptLocation);*/
 
 
 
         mLocationButton = v.findViewById(R.id.receipt_show_location);
-        //mLocationButton.setEnabled(mClient.isConnected());
         mLocationButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                /*Intent i  = new Intent(getActivity(), MapsActivity.class);
-                startActivity(i);*/
-                findLocation();
-                double lon = mReceipt.getLon();
                 double lat = mReceipt.getLat();
-                mLocation.setText("Location - Longitude: " + lon + "Latitude: " + lat);
+                double lon = mReceipt.getLon();
+                Intent i  = MapsActivity.newIntent(getActivity(), lat, lon);
+                startActivity(i);
             }
         });
 
@@ -372,31 +301,6 @@ public class ReceiptFragment extends Fragment implements OnConnectionFailedListe
             Bitmap bitmap = PictureUtils.getScaledBitmap(mPhotoFile.getPath(), getActivity());
             mPhotoView.setImageBitmap(bitmap);
         }
-    }
-
-    private void findLocation(){
-        LocationRequest request = LocationRequest.create();
-        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        request.setNumUpdates(1);
-        request.setInterval(0);
-
-        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED){
-            return;
-        }
-
-        LocationServices.FusedLocationApi.requestLocationUpdates(mClient, request, new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                mReceipt.setLocation(location);
-                mReceipt.setLat(location.getLatitude());
-                mReceipt.setLon(location.getLongitude());
-                Log.i("LOCATION", "Got a fix: " + location.getLatitude());
-                Log.i("mReceipt", "Location is" + mReceipt.getLon());
-            }
-        });
-
-
     }
 
 }
